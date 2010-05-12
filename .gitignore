@@ -1,0 +1,4 @@
+.svn/
+config.cfg
+ip_test.sh
+*.pyc
