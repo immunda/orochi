@@ -1,7 +1,7 @@
 from xmpp import *
-import sys, random, time, base64, urllib2, smtplib
+import sys, random, time, base64, urllib3, smtplib
 from email.mime.text import MIMEText
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from threading import Timer, Semaphore
 from jabber_rpc import Parser
 from random import uniform
@@ -10,7 +10,7 @@ import traceback
 class Notifier:
     """ Notification object """
     def __init__(self):
-        self.email = 'pxh07u@cs.nott.ac.uk'
+        self.email = ''
         self.phone = '00000000000'
         
     """ Send an email notification with message to a certain recipient. 
@@ -26,32 +26,31 @@ class Notifier:
     If the phone number isn't specified, the SMS will be sent to the administrator number defined in the system config file"""
     def send_sms(self, message):
         xml  = '''<?xml version=\"1.0\" encoding=\"UTF-8\"?><message><from>''' + self.phone + '''</from><to>''' + self.phone + '''</to><type>SMS</type><body>''' + message + '''</body><validity>0</validity></message>'''
-        #print xml
+        #print(xml)
         
-        username = 'phil@quae.co.uk'
-        password = 'NDX1678'
+        username = ''
+        password = ''
         
         encoded_details = base64.encodestring('%s:%s' % (username, password))[:-1]
         auth = "Basic %s" % encoded_details
-        #print auth
         
-        url = 'https://api.esendex.com/v0.2/Account/EX0063766/MessageDispatcher'
+        url = ''
         
         headers = {'Authorization' : auth, 'Content-Type' : 'text/xml'}
         
-        request = urllib2.Request(url, xml, headers)
+        request = urllib3.Request(url, xml, headers)
         try:
-            handle = urllib2.urlopen(request)
-        except IOError, e:
+            handle = urllib3.urlopen(request)
+        except IOError as e:
             if hasattr(e, 'reason'):
-                print 'Reason: ', e.reason
+                print('Reason: '), e.reason
                 return e
             elif hasattr(e, 'code'):
-                print 'Error code:', e.code
+                print('Error code:'), e.code
                 return e
         else:
             response = handle.read()
-            #print response 
+            #print(response )
         
         return True
         
@@ -101,12 +100,12 @@ class MessageScheduler:
 #            self.sem.release()
             Timer(delay, self.handler, (message,)).start()
         except AttributeError:
-            print "Can't send message, queue is shutting down."
+            print("Can't send message, queue is shutting down.")
 #        self.sem.release()
         
     """ Passed an iq node, removes any future scheduled message retries and if applicable, executes the assigned method. """
     def received_response(self, iq_node):
-#        print 'Message response received!'
+#        print('Message response received!')
         # Cancel subsequent message when response receieved
         self.sem.acquire()
         iq_id = iq_node.getAttr('id')
@@ -117,16 +116,16 @@ class MessageScheduler:
             try:
                 thread.cancel()
             except:
-                print 'Error removing retry message'
+                print('Error removing retry message')
             if action != None:
                 try:
                     apply(action, [sender, iq_node.getTag('query')])
                 except:
-                    print 'Failed to execute handler'
-#                    print sys.exc_info()
+                    print('Failed to execute handler')
+#                    print(sys.exc_info())
                     traceback.print_exc()
         except KeyError:
-            print 'Response already receieved'
+            print('Response already receieved')
         # No way to tell whether a response is to a retry or original. If original, then successful response, so cancel retry
         self.sem.release()
     
@@ -173,9 +172,9 @@ class ErrorResult(Exception):
     
 class Connection:
     """ Connection class, establish connection to XMPP """
-    def __init__(self, entity, password='roflcake', resource='skynet', static=False):
-        self.server = 'quae.co.uk'
-        self.muc_entity = 'conference.quae.co.uk'
+    def __init__(self, entity, password='', resource='skynet', static=False):
+        self.server = ''
+        self.muc_entity = ''
         self.resource = resource
         config = Configuration()
 
@@ -192,26 +191,26 @@ class Connection:
                             
         self.conres = self.conn.connect()
         if not self.conres:
-            print "Unable to connect to server %s!"%self.server
+            print("Unable to connect to server %s!")%self.server
             sys.exit(1)
-        if self.conres<>'tls':
-            print "Warning: unable to estabilish secure connection - TLS failed!"
+        if self.conres != 'tls':
+            print("Warning: unable to estabilish secure connection - TLS failed!")
         if static != True:
         # Registration
             self.regres = features.register(self.conn, self.server, {'username':self.entity, 'password':password})
             if not self.regres:
-                print "Unable to register on %s." %self.server
+                print("Unable to register on %s.") %self.server
                 sys.exit(1)
             else:
-                print self.regres
+                print(self.regres)
 
         # Authentication
         self.authres = self.conn.auth(self.entity, password, self.resource)
         if not self.authres:
-            print "Unable to authorize on %s - check login/password."%self.server
+            print("Unable to authorize on %s - check login/password.")%self.server
             sys.exit(1)
-        if self.authres<>'sasl':
-            print "Warning: unable to perform SASL auth os %s. Old authentication method used!"%self.server
+        if self.authres != 'sasl':
+            print("Warning: unable to perform SASL auth os %s. Old authentication method used!")%self.server
         self.conn.sendInitPresence()
 
     def unregister(self):
